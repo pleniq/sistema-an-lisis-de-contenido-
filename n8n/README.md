@@ -8,6 +8,7 @@ Dos workflows importables. **El ping queda 100% funcional al importarlo**; el de
 |---|---|
 | `ping-webhook.workflow.json` | Webhook `GET /webhook/lab-ping` que responde `200 {"status":"alive"}`. Es el **liveness**: el backend le pega antes de sincronizar para saber si n8n está prendido. |
 | `ingest.workflow.json` | Webhook `POST /webhook/lab-ingest` (lo dispara el backend). Trae los Reels de la Graph API, arma el batch y lo postea a `POST /api/v1/ingest/instagram`. |
+| `refresh-token.workflow.json` | Schedule cada ~50 días que renueva el long-lived token de Meta (ver wrinkle abajo). |
 
 ## Cómo importar
 
@@ -56,6 +57,14 @@ Con eso, `GET /api/v1/sync/status` va a devolver `n8n_alive: true` y el botón "
 - La paginación de `/media` se maneja en el nodo **GET media** (opción *pagination* → `paging.next`).
 - Permisos necesarios en la app de Meta: `instagram_basic`, `instagram_manage_insights`, `pages_show_list` / `pages_read_engagement`.
 
-## Refresh del token (Etapa 5)
+## Refresh del token (`refresh-token.workflow.json`)
 
-El long-lived token dura ~60 días. El workflow de refresh (`refresh-token.workflow.json`, se agrega en la Iteración 5) lo renueva por Schedule mientras n8n esté prendido.
+El long-lived token de Meta dura ~60 días. Este workflow corre por Schedule cada ~50 días (mientras n8n esté prendido) y lo renueva llamando a `GET /oauth/access_token?grant_type=fb_exchange_token`.
+
+Variables de entorno que lee (en n8n): `META_APP_ID`, `META_APP_SECRET`, `IG_LONG_LIVED_TOKEN`.
+
+> ⚠️ **Wrinkle (a validar en tu versión de n8n):** escribir el token renovado de vuelta en la **credencial** de n8n depende de la API pública (`PATCH /api/v1/credentials/{id}`), que no todas las versiones soportan para credenciales. El workflow deja el nuevo token en el output del nodo **Nuevo token**. Fallbacks:
+> 1. Guardar el token en la variable de entorno `IG_LONG_LIVED_TOKEN` que leen los otros workflows (en vez de una credencial), y actualizar esa variable.
+> 2. Copiar el nuevo token a mano a la credencial cuando el Schedule dispare (n8n puede notificarte).
+>
+> Como corre local y no siempre prendido, poné un recordatorio ~cada 50 días para abrir n8n y dejar que el Schedule corra, igual que con la ingesta.

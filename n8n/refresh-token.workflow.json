@@ -1,0 +1,53 @@
+{
+  "name": "Lab Contenido — Refresh token (~50 días)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "days", "daysInterval": 50 }]
+        }
+      },
+      "id": "schedule",
+      "name": "Cada 50 días",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [300, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://graph.facebook.com/v21.0/oauth/access_token",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "grant_type", "value": "fb_exchange_token" },
+            { "name": "client_id", "value": "={{ $env.META_APP_ID }}" },
+            { "name": "client_secret", "value": "={{ $env.META_APP_SECRET }}" },
+            { "name": "fb_exchange_token", "value": "={{ $env.IG_LONG_LIVED_TOKEN }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "refresh",
+      "name": "Renovar token (Graph)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [540, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// El nuevo long-lived token (dura ~60 días).\n// ⚠️ WRINKLE (ver README): escribir este token de vuelta en la credencial de n8n\n// depende de la API pública de n8n (PATCH /credentials/{id}). Si tu versión no lo\n// soporta bien, el fallback es leer el token desde $env y actualizar esa variable,\n// o pegarlo a mano en la credencial. Este nodo lo deja disponible para el paso final.\nconst token = $json.access_token;\nconst expiresIn = $json.expires_in;\nreturn [{ json: { new_access_token: token, expires_in: expiresIn, refreshed_at: new Date().toISOString() } }];"
+      },
+      "id": "extract",
+      "name": "Nuevo token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 300]
+    }
+  ],
+  "connections": {
+    "Cada 50 días": { "main": [[{ "node": "Renovar token (Graph)", "type": "main", "index": 0 }]] },
+    "Renovar token (Graph)": { "main": [[{ "node": "Nuevo token", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
+}
