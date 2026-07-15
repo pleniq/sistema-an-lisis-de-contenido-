@@ -37,3 +37,19 @@ def get_reel_with_latest(db: Session, reel_id: str) -> Optional[dict]:
         _SELECT + " WHERE r.id = :rid"
     ), {"rid": reel_id}).mappings().first()
     return dict(row) if row else None
+
+
+def list_snapshots(db: Session, reel_id: str) -> list[dict]:
+    """Historial de snapshots de un reel (curva en el tiempo) + ratios por fila."""
+    rows = db.execute(text("""
+        SELECT snapshot_date, reach, views, likes, comments, saved, shares,
+               total_interactions,
+               (avg_watch_time_ms / 1000.0) AS avg_watch_time_sec,
+               (total_interactions::float / NULLIF(reach, 0)) AS engagement_rate,
+               (saved::float / NULLIF(reach, 0)) AS save_rate,
+               (shares::float / NULLIF(reach, 0)) AS share_rate
+        FROM reel_metric_snapshots
+        WHERE reel_id = :rid
+        ORDER BY snapshot_date ASC
+    """), {"rid": reel_id}).mappings().all()
+    return [dict(r) for r in rows]

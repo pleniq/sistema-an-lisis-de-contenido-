@@ -3,9 +3,11 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.models import Reel
-from app.repositories.reel_repository import list_reels_with_latest, get_reel_with_latest
+from app.repositories.reel_repository import (
+    list_reels_with_latest, get_reel_with_latest, list_snapshots,
+)
 from app.repositories import label_repository as labels
-from app.schemas.reel import ReelRow, ReelUpdate
+from app.schemas.reel import ReelRow, ReelUpdate, SnapshotRow
 
 MANUAL_TEXT_FIELDS = {"titulo", "guion"}
 
@@ -17,6 +19,10 @@ def get_reels(db: Session) -> list[ReelRow]:
 def get_reel(db: Session, reel_id: str) -> Optional[ReelRow]:
     row = get_reel_with_latest(db, reel_id)
     return ReelRow(**row) if row else None
+
+
+def get_reel_history(db: Session, reel_id: str) -> list[SnapshotRow]:
+    return [SnapshotRow(**row) for row in list_snapshots(db, reel_id)]
 
 
 def update_reel(db: Session, reel_id: str, update: ReelUpdate) -> Optional[ReelRow]:
