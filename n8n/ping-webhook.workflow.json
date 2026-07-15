@@ -1,0 +1,39 @@
+{
+  "name": "Lab Contenido — Ping (liveness)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "lab-ping",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-ping",
+      "name": "Webhook Ping",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [400, 300],
+      "webhookId": "lab-ping"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 200,
+        "responseBody": "={{ { \"status\": \"alive\" } }}",
+        "options": {}
+      },
+      "id": "respond-ping",
+      "name": "Responder 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [640, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Ping": {
+      "main": [[{ "node": "Responder 200", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
+}

@@ -1,0 +1,143 @@
+{
+  "name": "Lab Contenido — Ingesta de Reels",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lab-ingest",
+        "options": {}
+      },
+      "id": "webhook-ingest",
+      "name": "Webhook Ingesta",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "webhookId": "lab-ingest"
+    },
+    {
+      "parameters": {
+        "jsCode": "// EDITÁ estos valores (el ig_user_id es el ID de tu cuenta IG business).\n// El access token NO va acá: vive en la credencial de n8n (ver README).\nreturn [{ json: {\n  igUserId: '__IG_USER_ID__',\n  accountName: 'Pleniq',\n  graphVersion: 'v21.0',\n  backendIngestUrl: 'http://localhost:8010/api/v1/ingest/instagram'\n} }];"
+      },
+      "id": "params",
+      "name": "Parámetros",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/{{ $json.graphVersion }}/{{ $json.igUserId }}/media",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "fields", "value": "id,media_type,media_product_type,permalink,caption,thumbnail_url,timestamp" }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "paginationMode": "responseContainsNextURL",
+              "nextURL": "={{ $response.body.paging?.next }}",
+              "limitPagesFetched": false
+            }
+          }
+        }
+      },
+      "id": "get-media",
+      "name": "GET media",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300],
+      "credentials": {
+        "httpQueryAuth": { "id": "REEMPLAZAR", "name": "Meta IG Token (access_token)" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aplana data[] de todas las páginas y deja solo Reels.\nconst out = [];\nfor (const item of $input.all()) {\n  const data = item.json.data || [];\n  for (const m of data) {\n    if (m.media_product_type === 'REELS') out.push({ json: m });\n  }\n}\nreturn out;"
+      },
+      "id": "filter-reels",
+      "name": "Filtrar Reels",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/{{ $('Parámetros').first().json.graphVersion }}/{{ $json.id }}/insights",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "metric", "value": "reach,views,likes,comments,saved,shares,total_interactions,ig_reels_avg_watch_time,ig_reels_video_view_total_time" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-insights",
+      "name": "GET insights",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 300],
+      "credentials": {
+        "httpQueryAuth": { "id": "REEMPLAZAR", "name": "Meta IG Token (access_token)" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Cada item = insights de un reel; su media pareada está en 'Filtrar Reels'.\nconst reel = $('Filtrar Reels').item.json;\nconst data = $json.data || [];\nconst m = {};\nfor (const d of data) { m[d.name] = d.values?.[0]?.value ?? null; }\nreturn [{ json: {\n  ig_media_id: reel.id,\n  permalink: reel.permalink ?? null,\n  caption: reel.caption ?? null,\n  thumbnail_url: reel.thumbnail_url ?? null,\n  media_product_type: reel.media_product_type ?? null,\n  timestamp: reel.timestamp ?? null,\n  metrics: {\n    reach: m.reach ?? null,\n    views: m.views ?? null,\n    likes: m.likes ?? null,\n    comments: m.comments ?? null,\n    saved: m.saved ?? null,\n    shares: m.shares ?? null,\n    total_interactions: m.total_interactions ?? null,\n    ig_reels_avg_watch_time: m.ig_reels_avg_watch_time ?? null,\n    ig_reels_video_view_total_time: m.ig_reels_video_view_total_time ?? null\n  }\n} }];"
+      },
+      "id": "merge-reel",
+      "name": "Reel + métricas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Arma el batch único que espera POST /ingest/instagram.\nconst p = $('Parámetros').first().json;\nconst reels = $input.all().map(i => i.json);\nreturn [{ json: {\n  account: { ig_user_id: p.igUserId, name: p.accountName },\n  captured_at: new Date().toISOString(),\n  reels\n} }];"
+      },
+      "id": "build-batch",
+      "name": "Armar batch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1520, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Parámetros').first().json.backendIngestUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Ingest-Token", "value": "={{ $env.LAB_INGEST_TOKEN }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "post-ingest",
+      "name": "POST al backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1740, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Ingesta": { "main": [[{ "node": "Parámetros", "type": "main", "index": 0 }]] },
+    "Parámetros": { "main": [[{ "node": "GET media", "type": "main", "index": 0 }]] },
+    "GET media": { "main": [[{ "node": "Filtrar Reels", "type": "main", "index": 0 }]] },
+    "Filtrar Reels": { "main": [[{ "node": "GET insights", "type": "main", "index": 0 }]] },
+    "GET insights": { "main": [[{ "node": "Reel + métricas", "type": "main", "index": 0 }]] },
+    "Reel + métricas": { "main": [[{ "node": "Armar batch", "type": "main", "index": 0 }]] },
+    "Armar batch": { "main": [[{ "node": "POST al backend", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
+}
