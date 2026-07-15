@@ -10,7 +10,15 @@ class ReelRow(BaseModel):
     caption: Optional[str] = None
     thumbnail_url: Optional[str] = None
     titulo: Optional[str] = None
+    guion: Optional[str] = None
     published_at: Optional[datetime] = None
+    # etiquetas (nombres, no ids) — para la tabla y el panel de etiquetado
+    angulo: Optional[str] = None
+    formato: Optional[str] = None
+    tipo_hook: Optional[str] = None
+    categoria: Optional[str] = None
+    tema: Optional[str] = None
+    # métricas del último snapshot + ratios (vista reel_latest_metrics)
     snapshot_date: Optional[date] = None
     reach: Optional[int] = None
     views: Optional[int] = None
@@ -23,3 +31,15 @@ class ReelRow(BaseModel):
     engagement_rate: Optional[float] = None
     save_rate: Optional[float] = None
     share_rate: Optional[float] = None
+
+
+class ReelUpdate(BaseModel):
+    """Edición de campos manuales. Solo se tocan los campos presentes en el request
+    (exclude_unset). Un campo de dimensión en null/"" limpia la etiqueta."""
+    titulo: Optional[str] = None
+    guion: Optional[str] = None
+    angulo: Optional[str] = None
+    formato: Optional[str] = None
+    tipo_hook: Optional[str] = None
+    categoria: Optional[str] = None
+    tema: Optional[str] = None
