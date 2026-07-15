@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.v1.ingest import router as ingest_router
+
 app = FastAPI(title="Laboratorio de Contenido API", version="0.1.0")
 
 app.add_middleware(
@@ -10,6 +12,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(ingest_router, prefix="/api/v1")
 
 
 @app.get("/health")
