@@ -171,7 +171,7 @@ app = FastAPI(title="Laboratorio de Contenido API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,  # v1 sin auth/cookies; '*' + credentials es combo inválido
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -227,7 +227,7 @@ git commit -m "feat(backend): scaffold FastAPI + config + health endpoint"
 `backend/app/models/__init__.py`:
 ```python
 import uuid
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional
 
 from sqlalchemy import (
@@ -242,6 +242,10 @@ def _uuid() -> str:
     return str(uuid.uuid4())
 
 
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 class Account(Base):
     __tablename__ = "accounts"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
@@ -249,15 +253,15 @@ class Account(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     token_ref: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     last_synced_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
 
 class _LabelBase:
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     account_id: Mapped[str] = mapped_column(String(36), ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
 class Angulo(_LabelBase, Base):
@@ -303,10 +307,10 @@ class Reel(Base):
     tipo_hook_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("tipos_hook.id", ondelete="SET NULL"), nullable=True)
     categoria_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("categorias.id", ondelete="SET NULL"), nullable=True)
     tema_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("temas.id", ondelete="SET NULL"), nullable=True)
-    first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     last_synced_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
     snapshots: Mapped[list["ReelMetricSnapshot"]] = relationship(
         "ReelMetricSnapshot", back_populates="reel", cascade="all, delete-orphan"
@@ -329,7 +333,7 @@ class ReelMetricSnapshot(Base):
     total_interactions: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     avg_watch_time_ms: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     total_watch_time_ms: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     reel: Mapped["Reel"] = relationship("Reel", back_populates="snapshots")
 
@@ -340,7 +344,7 @@ class IngestRun(Base):
     account_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True)
     trigger: Mapped[str] = mapped_column(String(16), default="manual")  # 'auto' | 'manual'
     status: Mapped[str] = mapped_column(String(16), default="running")  # running|ok|partial|error
-    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     reels_processed: Mapped[int] = mapped_column(Integer, default=0)
     snapshots_written: Mapped[int] = mapped_column(Integer, default=0)
@@ -364,7 +368,10 @@ from app.core.database import Base
 import app.models  # noqa: F401  (registra todos los modelos en Base.metadata)
 
 config = context.config
-config.set_main_option("sqlalchemy.url", get_settings().LAB_DATABASE_URL)
+# Respetar la URL si el caller ya la seteó (p.ej. el conftest apunta a la base de test);
+# solo caer a settings si no vino ninguna. NUNCA pisar la del caller con la de dev.
+if not config.get_main_option("sqlalchemy.url"):
+    config.set_main_option("sqlalchemy.url", get_settings().LAB_DATABASE_URL)
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
@@ -443,7 +450,9 @@ from app.main import app
 
 TEST_URL = get_settings().LAB_DATABASE_URL_TEST
 test_engine = create_engine(TEST_URL, pool_pre_ping=True)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False)
+TestingSessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, join_transaction_mode="create_savepoint"
+)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -728,13 +737,15 @@ git commit -m "feat(ingest): servicio de upsert idempotente que preserva campos 
 
 **Interfaces:**
 - Consumes: `ingest_batch()` (Task 3), `get_db`, `get_settings`.
-- Produces: `POST /api/v1/ingest/instagram` → 202 `{"reels_processed", "snapshots_written"}`; 401 si falta/está mal el token.
+- Produces: `POST /api/v1/ingest/instagram` → 200 `{"reels_processed", "snapshots_written"}`; 401 si falta/está mal el token.
 
 - [ ] **Step 1: Router de ingesta.**
 
 `backend/app/api/v1/__init__.py`: vacío.
 `backend/app/api/v1/ingest.py`:
 ```python
+import secrets
+
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -747,11 +758,13 @@ router = APIRouter(prefix="/ingest", tags=["ingest"])
 
 
 def _check_token(x_ingest_token: str | None = Header(default=None)):
-    if x_ingest_token != get_settings().LAB_INGEST_TOKEN:
+    expected = get_settings().LAB_INGEST_TOKEN
+    # comparación constant-time para evitar timing side-channel
+    if not secrets.compare_digest(x_ingest_token or "", expected):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token de ingesta inválido")
 
 
-@router.post("/instagram", status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(_check_token)])
+@router.post("/instagram", status_code=status.HTTP_200_OK, dependencies=[Depends(_check_token)])
 def ingest_instagram(batch: IngestBatch, db: Session = Depends(get_db)):
     return ingest_batch(db, batch)
 ```
@@ -794,7 +807,7 @@ def test_ingest_requires_token(client):
 def test_ingest_with_token_ok(client):
     resp = client.post("/api/v1/ingest/instagram", json=PAYLOAD,
                        headers={"X-Ingest-Token": TOKEN})
-    assert resp.status_code == 202
+    assert resp.status_code == 200
     assert resp.json() == {"reels_processed": 1, "snapshots_written": 1}
 ```
 
@@ -1252,3 +1265,24 @@ git push
 **Placeholders:** ninguno; todo el código está completo.
 
 **Consistencia de tipos:** `IngestBatch/IngestReel/IngestMetrics` definidos en Task 3 y usados igual en Tasks 4-6. `ReelRow` definido en Task 5 y consumido por el front en Task 7 con los mismos campos. `ingest_batch()` devuelve `{"reels_processed","snapshots_written"}` en Task 3 y se asume ese shape en Tasks 4-6. Nombres de métricas alineados con el spec (`views`, `saved`, `ig_reels_avg_watch_time`, etc.).
+
+---
+
+## Resolución de hallazgos del review (2026-07-15)
+
+Aplicado en fases, de más a menos importante:
+
+**Fase 1 — Critical**
+- **C1** ✅ `alembic/env.py` ya no pisa la URL: solo cae a settings si el caller no la seteó → el conftest puede apuntar a la base de test sin migrar la de dev.
+
+**Fase 2 — Important**
+- **I1** ✅ `conftest.py` usa `join_transaction_mode="create_savepoint"` → el `commit()` del service cierra un savepoint, no la transacción externa; el rollback por test aísla de verdad (sin fugas ni violaciones de UNIQUE entre tests).
+- **I2** ✅ Timestamps con `_now()` (tz-aware, `datetime.now(timezone.utc)`) en vez de `datetime.utcnow` (naive + deprecado en Python 3.12+).
+
+**Fase 3 — Suggestions**
+- **S1** ✅ Token de ingesta con `secrets.compare_digest` (constant-time).
+- **S2** ✅ `POST /ingest/instagram` responde `200` (trabajo sincrónico); el `202` queda reservado para `POST /sync/refresh` (Iter 2, async).
+- **S5** ✅ CORS con `allow_credentials=False` (v1 sin auth; `*` + credentials era combo inválido).
+- **S3** 🔵 Decisión: se mantiene `commit()` en el service por consistencia con el patrón de PLENIQ; el aislamiento de tests ya lo resuelve I1. Migrar a unit-of-work en el endpoint queda como refactor acotado a futuro.
+- **S4** 🔵 Diferido (YAGNI): el N+1 de `ingest_batch` (2 queries/reel) es sano para un sync diario/manual de decenas-cientos de reels. Si escala, pre-cargar reels por `ig_media_id` en una sola query.
+- **S6** 🔵 Checkpoint: verificar el mixin `_LabelBase` en el primer `alembic revision --autogenerate` (Task 2, Step 3); si algo no copia bien las columnas, se explicitan las 5 tablas sin mixin.
