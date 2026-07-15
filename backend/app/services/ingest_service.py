@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.schemas.ingest import IngestBatch
 from app.repositories.ingest_repository import upsert_account, upsert_reel, upsert_snapshot
+from app.repositories.ingest_run_repository import close_open_runs
 
 
 def ingest_batch(db: Session, batch: IngestBatch) -> dict:
@@ -15,4 +16,6 @@ def ingest_batch(db: Session, batch: IngestBatch) -> dict:
             snapshots_written += 1
         reels_processed += 1
     db.commit()
+    # Cierra la corrida abierta (si el batch llegó vía el sync async de n8n).
+    close_open_runs(db, reels_processed=reels_processed, snapshots_written=snapshots_written)
     return {"reels_processed": reels_processed, "snapshots_written": snapshots_written}
