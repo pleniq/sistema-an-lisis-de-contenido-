@@ -1,6 +1,35 @@
+export type Dimension = "angulo" | "formato" | "tipo_hook" | "categoria" | "tema";
+
+export const DIMENSIONS: { key: Dimension; label: string }[] = [
+  { key: "angulo", label: "Ángulo" },
+  { key: "formato", label: "Formato" },
+  { key: "tipo_hook", label: "Tipo de hook" },
+  { key: "categoria", label: "Categoría" },
+  { key: "tema", label: "Tema" },
+];
+
 export interface ReelRow {
   id: string; ig_media_id: string; titulo: string | null; caption: string | null;
-  permalink: string | null; published_at: string | null;
+  guion: string | null; permalink: string | null; thumbnail_url: string | null;
+  published_at: string | null;
+  angulo: string | null; formato: string | null; tipo_hook: string | null;
+  categoria: string | null; tema: string | null;
+  reach: number | null; views: number | null; likes: number | null;
+  comments: number | null; saved: number | null; shares: number | null;
+  total_interactions: number | null; avg_watch_time_sec: number | null;
+  engagement_rate: number | null; save_rate: number | null; share_rate: number | null;
+}
+
+export interface ReelUpdate {
+  titulo?: string | null; guion?: string | null;
+  angulo?: string | null; formato?: string | null; tipo_hook?: string | null;
+  categoria?: string | null; tema?: string | null;
+}
+
+export interface LabelValue { id: string; name: string; }
+
+export interface AnalysisRow {
+  grupo: string; reels: number;
   reach: number | null; views: number | null; likes: number | null;
   comments: number | null; saved: number | null; shares: number | null;
   total_interactions: number | null; avg_watch_time_sec: number | null;
@@ -18,20 +47,30 @@ export interface SyncStatus {
   last_synced_at: string | null; last_run: SyncRun | null;
 }
 
-export async function fetchReels(): Promise<ReelRow[]> {
-  const res = await fetch("/api/v1/reels");
+async function jsonOrThrow(res: Response) {
   if (!res.ok) throw new Error(`Error ${res.status}`);
   return res.json();
 }
 
-export async function fetchSyncStatus(): Promise<SyncStatus> {
-  const res = await fetch("/api/v1/sync/status");
-  if (!res.ok) throw new Error(`Error ${res.status}`);
-  return res.json();
-}
+export const fetchReels = (): Promise<ReelRow[]> =>
+  fetch("/api/v1/reels").then(jsonOrThrow);
+
+export const patchReel = (id: string, update: ReelUpdate): Promise<ReelRow> =>
+  fetch(`/api/v1/reels/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(update),
+  }).then(jsonOrThrow);
+
+export const fetchLabels = (dim: Dimension): Promise<LabelValue[]> =>
+  fetch(`/api/v1/labels/${dim}`).then(jsonOrThrow);
+
+export const fetchAnalysis = (groupBy: Dimension): Promise<AnalysisRow[]> =>
+  fetch(`/api/v1/analysis?group_by=${groupBy}`).then(jsonOrThrow);
+
+export const fetchSyncStatus = (): Promise<SyncStatus> =>
+  fetch("/api/v1/sync/status").then(jsonOrThrow);
 
 /** Dispara el sync. Devuelve el código HTTP (202 started, 409 running, 503 n8n down, 200 fresh). */
-export async function triggerRefresh(force: boolean): Promise<number> {
-  const res = await fetch(`/api/v1/sync/refresh?force=${force}&trigger=manual`, { method: "POST" });
-  return res.status;
-}
+export const triggerRefresh = (force: boolean): Promise<number> =>
+  fetch(`/api/v1/sync/refresh?force=${force}&trigger=manual`, { method: "POST" }).then((r) => r.status);

@@ -1,50 +1,53 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchReels, ReelRow } from "./lib/api";
+import { NavLink, Outlet } from "react-router-dom";
+import { DIMENSIONS, Dimension, LabelValue, ReelRow, fetchReels, fetchLabels } from "./lib/api";
+import { AppContext } from "./lib/appContext";
 import { useSync } from "./lib/useSync";
 import SyncBar from "./components/SyncBar";
 
-const pct = (v: number | null) => (v == null ? "—" : `${(v * 100).toFixed(1)}%`);
-const num = (v: number | null) => (v == null ? "—" : v.toLocaleString("es-AR"));
+const EMPTY_LABELS: Record<Dimension, LabelValue[]> = {
+  angulo: [], formato: [], tipo_hook: [], categoria: [], tema: [],
+};
 
 export default function App() {
   const [reels, setReels] = useState<ReelRow[]>([]);
+  const [labelOptions, setLabelOptions] = useState<Record<Dimension, LabelValue[]>>(EMPTY_LABELS);
   const [error, setError] = useState<string | null>(null);
 
-  const loadReels = useCallback(() => {
+  const reloadReels = useCallback(() => {
     fetchReels().then(setReels).catch((e) => setError(e.message));
   }, []);
 
-  const { status, syncing, message, refresh } = useSync(loadReels);
+  const reloadLabels = useCallback(() => {
+    Promise.all(DIMENSIONS.map(({ key }) => fetchLabels(key).then((vals) => [key, vals] as const)))
+      .then((pairs) => setLabelOptions(Object.fromEntries(pairs) as Record<Dimension, LabelValue[]>))
+      .catch(() => {});
+  }, []);
 
-  useEffect(() => { loadReels(); }, [loadReels]);
+  const updateReel = useCallback((updated: ReelRow) => {
+    setReels((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+  }, []);
+
+  const { status, syncing, message, refresh } = useSync(reloadReels);
+
+  useEffect(() => { reloadReels(); reloadLabels(); }, [reloadReels, reloadLabels]);
+
+  const ctx: AppContext = { reels, reloadReels, labelOptions, reloadLabels, updateReel };
 
   return (
     <div className="wrap">
       <header className="topbar">
-        <h1>Laboratorio de Contenido</h1>
+        <div className="brand">
+          <h1>Laboratorio de Contenido</h1>
+          <nav className="nav">
+            <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>Tabla</NavLink>
+            <NavLink to="/analisis" className={({ isActive }) => (isActive ? "active" : "")}>Qué funciona</NavLink>
+          </nav>
+        </div>
         <SyncBar status={status} syncing={syncing} message={message} onRefresh={() => refresh(true)} />
       </header>
       {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
-      <table>
-        <thead><tr>
-          <th>Título / Caption</th><th>Publicado</th><th>Reach</th><th>Views</th>
-          <th>Likes</th><th>Coment.</th><th>Saves</th><th>Shares</th>
-          <th>ER</th><th>Save%</th><th>Share%</th><th>Watch (s)</th>
-        </tr></thead>
-        <tbody>
-          {reels.map((r) => (
-            <tr key={r.id}>
-              <td>{r.titulo || r.caption || r.ig_media_id}</td>
-              <td>{r.published_at ? r.published_at.slice(0, 10) : "—"}</td>
-              <td>{num(r.reach)}</td><td>{num(r.views)}</td><td>{num(r.likes)}</td>
-              <td>{num(r.comments)}</td><td>{num(r.saved)}</td><td>{num(r.shares)}</td>
-              <td>{pct(r.engagement_rate)}</td><td>{pct(r.save_rate)}</td>
-              <td>{pct(r.share_rate)}</td>
-              <td>{r.avg_watch_time_sec == null ? "—" : r.avg_watch_time_sec.toFixed(1)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <Outlet context={ctx} />
     </div>
   );
 }
