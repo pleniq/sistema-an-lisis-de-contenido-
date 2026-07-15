@@ -36,6 +36,16 @@ export interface AnalysisRow {
   engagement_rate: number | null; save_rate: number | null; share_rate: number | null;
 }
 
+export interface SnapshotRow {
+  snapshot_date: string;
+  reach: number | null; views: number | null; likes: number | null;
+  comments: number | null; saved: number | null; shares: number | null;
+  total_interactions: number | null; avg_watch_time_sec: number | null;
+  engagement_rate: number | null; save_rate: number | null; share_rate: number | null;
+}
+
+export interface ExportResponse { format: string; reels: number; text: string; }
+
 export interface SyncRun {
   id: string; trigger: string; status: string;
   started_at: string | null; finished_at: string | null;
@@ -67,6 +77,16 @@ export const fetchLabels = (dim: Dimension): Promise<LabelValue[]> =>
 
 export const fetchAnalysis = (groupBy: Dimension): Promise<AnalysisRow[]> =>
   fetch(`/api/v1/analysis?group_by=${groupBy}`).then(jsonOrThrow);
+
+export const fetchReelHistory = (id: string): Promise<SnapshotRow[]> =>
+  fetch(`/api/v1/reels/${id}/history`).then(jsonOrThrow);
+
+export const exportReels = (ids: string[]): Promise<ExportResponse> =>
+  fetch("/api/v1/reels/export", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reel_ids: ids }),
+  }).then(jsonOrThrow);
 
 export const fetchSyncStatus = (): Promise<SyncStatus> =>
   fetch("/api/v1/sync/status").then(jsonOrThrow);

@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { DIMENSIONS, Dimension, ReelRow } from "../lib/api";
+import { DIMENSIONS, Dimension, ReelRow, exportReels } from "../lib/api";
 import { num, pct, sec, day } from "../lib/format";
 import { useApp } from "../lib/appContext";
 import ReelLabelEditor from "../components/ReelLabelEditor";
+import ReelDetail from "../components/ReelDetail";
 
 type SortKey = keyof ReelRow;
 const COLS: { key: SortKey; label: string; fmt: (r: ReelRow) => string }[] = [
@@ -26,6 +27,9 @@ export default function TablaPage() {
     angulo: "", formato: "", tipo_hook: "", categoria: "", tema: "",
   });
   const [editing, setEditing] = useState<ReelRow | null>(null);
+  const [detail, setDetail] = useState<ReelRow | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [copyMsg, setCopyMsg] = useState("");
 
   function toggleSort(key: SortKey) {
     if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -40,13 +44,44 @@ export default function TablaPage() {
       const av = a[sortKey] as number | string | null;
       const bv = b[sortKey] as number | string | null;
       if (av == null && bv == null) return 0;
-      if (av == null) return 1;      // nulls al final
+      if (av == null) return 1;
       if (bv == null) return -1;
       return (av as any) < (bv as any) ? -dir : (av as any) > (bv as any) ? dir : 0;
     });
   }, [reels, filters, sortKey, sortDir]);
 
   const arrow = (key: SortKey) => (key === sortKey ? (sortDir === "asc" ? " ▲" : " ▼") : "");
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  const allVisibleSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
+  function toggleAll() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) rows.forEach((r) => next.delete(r.id));
+      else rows.forEach((r) => next.add(r.id));
+      return next;
+    });
+  }
+
+  async function copyForClaude() {
+    if (selected.size === 0) return;
+    setCopyMsg("Copiando…");
+    try {
+      const res = await exportReels([...selected]);
+      await navigator.clipboard.writeText(res.text);
+      setCopyMsg(`Copiado: ${res.reels} reels al portapapeles`);
+    } catch {
+      setCopyMsg("No se pudo copiar (permiso de portapapeles)");
+    }
+    setTimeout(() => setCopyMsg(""), 4000);
+  }
 
   return (
     <>
@@ -60,12 +95,17 @@ export default function TablaPage() {
             </select>
           </label>
         ))}
+        <button className="btn" onClick={copyForClaude} disabled={selected.size === 0}>
+          Copiar para Claude ({selected.size})
+        </button>
+        {copyMsg && <span className="sync-msg">{copyMsg}</span>}
         <span className="count">{rows.length} reels</span>
       </div>
 
       <table>
         <thead>
           <tr>
+            <th><input type="checkbox" checked={allVisibleSelected} onChange={toggleAll} /></th>
             <th className="sortable" onClick={() => toggleSort("titulo")}>Título / Caption{arrow("titulo")}</th>
             <th className="sortable" onClick={() => toggleSort("published_at")}>Publicado{arrow("published_at")}</th>
             <th>Ángulo</th><th>Formato</th><th>Categoría</th>
@@ -77,8 +117,11 @@ export default function TablaPage() {
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.id}>
-              <td className="left">{r.titulo || r.caption || r.ig_media_id}</td>
+            <tr key={r.id} className={selected.has(r.id) ? "sel" : ""}>
+              <td><input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleOne(r.id)} /></td>
+              <td className="left">
+                <button className="link" onClick={() => setDetail(r)}>{r.titulo || r.caption || r.ig_media_id}</button>
+              </td>
               <td>{day(r.published_at)}</td>
               <td className="left tag">{r.angulo || "—"}</td>
               <td className="left tag">{r.formato || "—"}</td>
@@ -98,6 +141,7 @@ export default function TablaPage() {
           onClose={() => setEditing(null)}
         />
       )}
+      {detail && <ReelDetail reel={detail} onClose={() => setDetail(null)} />}
     </>
   );
 }

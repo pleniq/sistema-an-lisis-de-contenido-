@@ -48,3 +48,21 @@ th { background: #f4f4f5; position: sticky; top: 0; }
 .field label { font-size: 12px; color: #6b7280; }
 .field input, .field textarea { padding: 8px; border: 1px solid #d4d4d8; border-radius: 6px; font: inherit; }
 .drawer-actions { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+
+/* Fila seleccionada */
+tr.sel { background: #eff6ff; }
+
+/* Detalle de reel */
+.thumb { width: 100%; max-height: 240px; object-fit: cover; border-radius: 8px; margin-bottom: 12px; }
+.detail-meta { display: flex; justify-content: space-between; font-size: 13px; color: #444; margin-bottom: 10px; }
+.detail-meta a { color: #2563eb; text-decoration: none; }
+.detail-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.pill { background: #f4f4f5; color: #374151; border-radius: 999px; padding: 2px 10px; font-size: 12px; }
+.detail-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.detail-metrics .k { display: block; font-size: 11px; color: #6b7280; }
+.detail-metrics .v { font-size: 16px; font-weight: 600; }
+.detail-h { margin: 14px 0 6px; font-size: 13px; }
+.charts { display: flex; flex-direction: column; gap: 10px; }
+.chart { display: flex; flex-direction: column; gap: 2px; }
+.chart-label { font-size: 11px; color: #6b7280; }
+.guion { white-space: pre-wrap; font-size: 13px; color: #222; background: #fafafa; padding: 10px; border-radius: 6px; }
