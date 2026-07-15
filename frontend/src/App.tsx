@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { fetchReels, ReelRow } from "./lib/api";
+import { useSync } from "./lib/useSync";
+import SyncBar from "./components/SyncBar";
 
 const pct = (v: number | null) => (v == null ? "—" : `${(v * 100).toFixed(1)}%`);
 const num = (v: number | null) => (v == null ? "—" : v.toLocaleString("es-AR"));
@@ -8,11 +10,20 @@ export default function App() {
   const [reels, setReels] = useState<ReelRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { fetchReels().then(setReels).catch((e) => setError(e.message)); }, []);
+  const loadReels = useCallback(() => {
+    fetchReels().then(setReels).catch((e) => setError(e.message));
+  }, []);
+
+  const { status, syncing, message, refresh } = useSync(loadReels);
+
+  useEffect(() => { loadReels(); }, [loadReels]);
 
   return (
     <div className="wrap">
-      <h1>Laboratorio de Contenido</h1>
+      <header className="topbar">
+        <h1>Laboratorio de Contenido</h1>
+        <SyncBar status={status} syncing={syncing} message={message} onRefresh={() => refresh(true)} />
+      </header>
       {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
       <table>
         <thead><tr>

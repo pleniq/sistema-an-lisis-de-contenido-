@@ -1,6 +1,24 @@
 body { font-family: system-ui, sans-serif; margin: 0; background: #fafafa; color: #111; }
 .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
+h1 { font-size: 20px; margin: 0; }
+
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th, td { border-bottom: 1px solid #eee; padding: 8px 10px; text-align: right; white-space: nowrap; }
 th:first-child, td:first-child { text-align: left; }
 th { background: #f4f4f5; position: sticky; top: 0; }
+
+/* Sync bar */
+.syncbar { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.sync-meta { color: #666; }
+.sync-msg { color: #b45309; }
+.chip { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.chip-ok  { background: #dcfce7; color: #166534; }
+.chip-run { background: #fef3c7; color: #92400e; }
+.chip-off { background: #f4f4f5; color: #6b7280; }
+.btn {
+  background: #111; color: #fff; border: 0; border-radius: 6px;
+  padding: 7px 14px; font-size: 13px; cursor: pointer;
+}
+.btn:disabled { background: #d4d4d8; cursor: not-allowed; }
