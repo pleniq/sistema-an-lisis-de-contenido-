@@ -26,7 +26,9 @@ export interface ReelUpdate {
   categoria?: string | null; tema?: string | null;
 }
 
-export interface LabelValue { id: string; name: string; }
+export interface LabelValue { id: string; name: string; count?: number; }
+
+export interface LabelRenameResult { id: string; name: string; merged: boolean; }
 
 export interface AnalysisRow {
   grupo: string; reels: number;
@@ -108,6 +110,23 @@ export const patchReel = (id: string, update: ReelUpdate): Promise<ReelRow> =>
 
 export const fetchLabels = (dim: Dimension): Promise<LabelValue[]> =>
   fetch(`/api/v1/labels/${dim}`).then(jsonOrThrow);
+
+export const createLabel = (dim: Dimension, name: string): Promise<LabelValue> =>
+  fetch(`/api/v1/labels/${dim}`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  }).then(jsonOrThrow);
+
+export const renameLabel = (dim: Dimension, id: string, name: string): Promise<LabelRenameResult> =>
+  fetch(`/api/v1/labels/${dim}/${id}`, {
+    method: "PATCH", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  }).then(jsonOrThrow);
+
+export const deleteLabel = (dim: Dimension, id: string): Promise<void> =>
+  fetch(`/api/v1/labels/${dim}/${id}`, { method: "DELETE" }).then((r) => {
+    if (!r.ok) throw new Error(`Error ${r.status}`);
+  });
 
 export const fetchAnalysis = (groupBy: Dimension): Promise<AnalysisRow[]> =>
   fetch(`/api/v1/analysis?group_by=${groupBy}`).then(jsonOrThrow);

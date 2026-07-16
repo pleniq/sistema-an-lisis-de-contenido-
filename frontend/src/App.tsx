@@ -44,6 +44,7 @@ export default function App() {
           <nav className="nav">
             <NavLink to="/" end className={navClass}>Publicaciones</NavLink>
             <NavLink to="/analisis" className={navClass}>Qué funciona</NavLink>
+            <NavLink to="/etiquetas" className={navClass}>Etiquetas</NavLink>
             <NavLink to="/config" className={navClass}>Configuración</NavLink>
           </nav>
         </div>
