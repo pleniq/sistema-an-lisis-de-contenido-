@@ -2,8 +2,9 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import App from "./App";
-import TablaPage from "./pages/TablaPage";
+import GaleriaPage from "./pages/GaleriaPage";
 import AnalisisPage from "./pages/AnalisisPage";
+import ConfigPage from "./pages/ConfigPage";
 import "./styles.css";
 
 const router = createBrowserRouter([
@@ -11,8 +12,9 @@ const router = createBrowserRouter([
     path: "/",
     element: <App />,
     children: [
-      { index: true, element: <TablaPage /> },
+      { index: true, element: <GaleriaPage /> },
       { path: "analisis", element: <AnalisisPage /> },
+      { path: "config", element: <ConfigPage /> },
     ],
   },
 ]);

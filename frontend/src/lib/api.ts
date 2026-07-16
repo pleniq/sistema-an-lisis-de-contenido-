@@ -52,9 +52,43 @@ export interface SyncRun {
   reels_processed: number; snapshots_written: number; error_detail: string | null;
 }
 
+export type TokenStatus = "ok" | "expired" | "missing";
+
 export interface SyncStatus {
-  n8n_alive: boolean; running: boolean;
-  last_synced_at: string | null; last_run: SyncRun | null;
+  running: boolean;
+  last_synced_at: string | null;
+  last_run: SyncRun | null;
+  configured: boolean;
+  token_status: TokenStatus;
+  token_expires_at: string | null;
+  days_left: number | null;
+  account_name: string | null;
+}
+
+export interface RefreshResult {
+  outcome: string;   // ok | skipped_fresh | not_configured | token_expired | already_running | error
+  reels_processed?: number;
+  snapshots_written?: number;
+  detail?: string;
+}
+
+export interface MetaConfigStatus {
+  connected: boolean;
+  token_status: TokenStatus;
+  ig_user_id: string | null;
+  account_name: string | null;
+  token_expires_at: string | null;
+  days_left: number | null;
+  long_lived: boolean;
+  last_error: string | null;
+}
+
+export interface MetaConfigIn {
+  access_token: string;
+  ig_user_id?: string;
+  account_name?: string;
+  app_id?: string;
+  app_secret?: string;
 }
 
 async function jsonOrThrow(res: Response) {
@@ -91,6 +125,17 @@ export const exportReels = (ids: string[]): Promise<ExportResponse> =>
 export const fetchSyncStatus = (): Promise<SyncStatus> =>
   fetch("/api/v1/sync/status").then(jsonOrThrow);
 
-/** Dispara el sync. Devuelve el código HTTP (202 started, 409 running, 503 n8n down, 200 fresh). */
-export const triggerRefresh = (force: boolean): Promise<number> =>
-  fetch(`/api/v1/sync/refresh?force=${force}&trigger=manual`, { method: "POST" }).then((r) => r.status);
+/** Dispara el sync (sincrónico). Devuelve el outcome del backend. */
+export const triggerRefresh = (force: boolean): Promise<RefreshResult> =>
+  fetch(`/api/v1/sync/refresh?force=${force}&trigger=manual`, { method: "POST" })
+    .then(async (r) => (r.status === 409 ? { outcome: "already_running" } : r.json()));
+
+export const fetchMetaConfig = (): Promise<MetaConfigStatus> =>
+  fetch("/api/v1/config/meta").then(jsonOrThrow);
+
+export const saveMetaConfig = (data: MetaConfigIn): Promise<MetaConfigStatus> =>
+  fetch("/api/v1/config/meta", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  }).then(jsonOrThrow);

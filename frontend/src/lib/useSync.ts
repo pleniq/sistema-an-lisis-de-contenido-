@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchSyncStatus, triggerRefresh, SyncStatus } from "./api";
+import { fetchSyncStatus, triggerRefresh, SyncStatus, RefreshResult } from "./api";
 
 const STALE_MS = 5 * 60 * 1000;
 
@@ -9,68 +9,53 @@ function isStale(lastSyncedAt: string | null): boolean {
 }
 
 /**
- * Maneja el sync on-demand: al montar, si los datos están viejos y n8n está vivo,
- * dispara una actualización; deja un botón manual y pollea el estado mientras corre.
- * `onSynced` se llama cuando una corrida termina, para recargar los datos.
+ * Sync on-demand. El backend jala directo de Meta (sincrónico), así que refresh()
+ * espera el resultado y recarga. Al abrir, si los datos están viejos y el token está
+ * ok, actualiza solo. Expone el estado del token para avisar "expirado".
  */
 export function useSync(onSynced: () => void) {
   const [status, setStatus] = useState<SyncStatus | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [message, setMessage] = useState<string>("");
-  const pollRef = useRef<number | null>(null);
+  const [message, setMessage] = useState("");
   const onSyncedRef = useRef(onSynced);
   onSyncedRef.current = onSynced;
 
-  const stopPolling = useCallback(() => {
-    if (pollRef.current !== null) { window.clearInterval(pollRef.current); pollRef.current = null; }
+  const loadStatus = useCallback(async () => {
+    const s = await fetchSyncStatus().catch(() => null);
+    if (s) setStatus(s);
+    return s;
   }, []);
-
-  const startPolling = useCallback(() => {
-    stopPolling();
-    pollRef.current = window.setInterval(async () => {
-      const s = await fetchSyncStatus().catch(() => null);
-      if (!s) return;
-      setStatus(s);
-      if (!s.running) {
-        stopPolling();
-        setSyncing(false);
-        setMessage("");
-        onSyncedRef.current();
-      }
-    }, 2000);
-  }, [stopPolling]);
 
   const refresh = useCallback(async (force: boolean) => {
     setSyncing(true);
-    setMessage("Actualizando…");
-    const code = await triggerRefresh(force).catch(() => 0);
-    if (code === 202 || code === 409) {
-      startPolling();
-    } else {
-      setSyncing(false);
-      if (code === 503) setMessage("n8n apagado");
-      else if (code === 200) setMessage("");
-      else setMessage("No se pudo disparar la actualización");
-      const s = await fetchSyncStatus().catch(() => null);
-      if (s) setStatus(s);
+    setMessage("");
+    const res: RefreshResult = await triggerRefresh(force).catch(() => ({ outcome: "error" }));
+    switch (res.outcome) {
+      case "ok":
+        setMessage(`Actualizado · ${res.reels_processed ?? ""} reels`);
+        onSyncedRef.current();
+        break;
+      case "token_expired": setMessage("Token de Meta expirado"); break;
+      case "not_configured": setMessage("Falta el token en Configuración"); break;
+      case "already_running": setMessage("Ya se está actualizando"); break;
+      case "error": setMessage("No se pudo actualizar"); break;
+      default: break; // skipped_fresh → sin mensaje
     }
-  }, [startPolling]);
+    await loadStatus();
+    setSyncing(false);
+  }, [loadStatus]);
 
   useEffect(() => {
     let active = true;
     (async () => {
-      const s = await fetchSyncStatus().catch(() => null);
-      if (!active) return;
-      setStatus(s);
-      if (s && s.n8n_alive && !s.running && isStale(s.last_synced_at)) {
+      const s = await loadStatus();
+      if (!active || !s) return;
+      if (s.configured && s.token_status === "ok" && !s.running && isStale(s.last_synced_at)) {
         refresh(false);
-      } else if (s && s.running) {
-        setSyncing(true);
-        startPolling();
       }
     })();
-    return () => { active = false; stopPolling(); };
-  }, [refresh, startPolling, stopPolling]);
+    return () => { active = false; };
+  }, [loadStatus, refresh]);
 
-  return { status, syncing, message, refresh };
+  return { status, syncing, message, refresh, reloadStatus: loadStatus };
 }

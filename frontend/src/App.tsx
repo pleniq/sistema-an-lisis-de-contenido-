@@ -9,14 +9,13 @@ const EMPTY_LABELS: Record<Dimension, LabelValue[]> = {
   angulo: [], formato: [], tipo_hook: [], categoria: [], tema: [],
 };
 
+const navClass = ({ isActive }: { isActive: boolean }) => (isActive ? "nav-link active" : "nav-link");
+
 export default function App() {
   const [reels, setReels] = useState<ReelRow[]>([]);
   const [labelOptions, setLabelOptions] = useState<Record<Dimension, LabelValue[]>>(EMPTY_LABELS);
-  const [error, setError] = useState<string | null>(null);
 
-  const reloadReels = useCallback(() => {
-    fetchReels().then(setReels).catch((e) => setError(e.message));
-  }, []);
+  const reloadReels = useCallback(() => { fetchReels().then(setReels).catch(() => {}); }, []);
 
   const reloadLabels = useCallback(() => {
     Promise.all(DIMENSIONS.map(({ key }) => fetchLabels(key).then((vals) => [key, vals] as const)))
@@ -35,19 +34,24 @@ export default function App() {
   const ctx: AppContext = { reels, reloadReels, labelOptions, reloadLabels, updateReel };
 
   return (
-    <div className="wrap">
+    <div className="app">
       <header className="topbar">
-        <div className="brand">
-          <h1>Laboratorio de Contenido</h1>
+        <div className="topbar-left">
+          <div className="logo">
+            <span className="logo-mark" aria-hidden />
+            <span className="logo-text">Laboratorio de Contenido</span>
+          </div>
           <nav className="nav">
-            <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>Tabla</NavLink>
-            <NavLink to="/analisis" className={({ isActive }) => (isActive ? "active" : "")}>Qué funciona</NavLink>
+            <NavLink to="/" end className={navClass}>Publicaciones</NavLink>
+            <NavLink to="/analisis" className={navClass}>Qué funciona</NavLink>
+            <NavLink to="/config" className={navClass}>Configuración</NavLink>
           </nav>
         </div>
         <SyncBar status={status} syncing={syncing} message={message} onRefresh={() => refresh(true)} />
       </header>
-      {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
-      <Outlet context={ctx} />
+      <main className="content">
+        <Outlet context={ctx} />
+      </main>
     </div>
   );
 }
