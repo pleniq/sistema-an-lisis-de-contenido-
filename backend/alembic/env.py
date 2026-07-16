@@ -4,7 +4,7 @@ from alembic import context
 
 from app.core.config import get_settings
 from app.core.database import Base
-import app.models  # noqa: F401  (registra todos los modelos en Base.metadata)
+import app.models.v1  # noqa: F401  (registra todos los modelos en Base.metadata)
 
 config = context.config
 # Respetar la URL si el caller ya la seteó (p.ej. el conftest apunta a la base de test);

@@ -4,7 +4,7 @@ from typing import Optional
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
-from app.models import IngestRun, Account
+from app.models.v1 import IngestRun, Account
 
 
 def _now() -> datetime:

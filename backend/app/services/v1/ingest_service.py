@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 
-from app.schemas.ingest import IngestBatch
-from app.repositories.ingest_repository import upsert_account, upsert_reel, upsert_snapshot
-from app.repositories.ingest_run_repository import close_open_runs
+from app.schemas.v1.ingest import IngestBatch
+from app.repositories.v1.ingest_repository import upsert_account, upsert_reel, upsert_snapshot
+from app.repositories.v1.ingest_run_repository import close_open_runs
 
 
 def ingest_batch(db: Session, batch: IngestBatch) -> dict:

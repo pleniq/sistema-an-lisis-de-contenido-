@@ -6,7 +6,7 @@ Dos partes (ver diseño §7):
 """
 from sqlalchemy.orm import Session
 
-from app.repositories.reel_repository import get_reel_with_latest
+from app.repositories.v1.reel_repository import get_reel_with_latest
 
 _TABLE_HEADER = (
     "| # | título | publicado | ángulo | formato | hook | categoría | tema | "

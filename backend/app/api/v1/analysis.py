@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.repositories.label_repository import DIMENSIONS
-from app.schemas.analysis import AnalysisRow
-from app.services.analysis_service import get_analysis
+from app.repositories.v1.label_repository import DIMENSIONS
+from app.schemas.v1.analysis import AnalysisRow
+from app.services.v1.analysis_service import get_analysis
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 

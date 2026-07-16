@@ -2,12 +2,12 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import Reel
-from app.repositories.reel_repository import (
+from app.models.v1 import Reel
+from app.repositories.v1.reel_repository import (
     list_reels_with_latest, get_reel_with_latest, list_snapshots,
 )
-from app.repositories import label_repository as labels
-from app.schemas.reel import ReelRow, ReelUpdate, SnapshotRow
+from app.repositories.v1 import label_repository as labels
+from app.schemas.v1.reel import ReelRow, ReelUpdate, SnapshotRow
 
 MANUAL_TEXT_FIELDS = {"titulo", "guion"}
 

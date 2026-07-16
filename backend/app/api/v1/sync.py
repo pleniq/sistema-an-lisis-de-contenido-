@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.services import sync_service
+from app.services.v1 import sync_service
 
 router = APIRouter(prefix="/sync", tags=["sync"])
 

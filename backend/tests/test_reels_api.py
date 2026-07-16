@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
-from app.schemas.ingest import IngestBatch, IngestAccount, IngestReel, IngestMetrics
-from app.services.ingest_service import ingest_batch
+from app.schemas.v1.ingest import IngestBatch, IngestAccount, IngestReel, IngestMetrics
+from app.services.v1.ingest_service import ingest_batch
 
 
 def test_reels_returns_latest_metrics_and_ratios(client, db):

@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.config import get_settings
-from app.schemas.ingest import IngestBatch
-from app.services.ingest_service import ingest_batch
+from app.schemas.v1.ingest import IngestBatch
+from app.services.v1.ingest_service import ingest_batch
 
 router = APIRouter(prefix="/ingest", tags=["ingest"])
 

@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
-from app.repositories.analysis_repository import analysis_by_dimension
-from app.schemas.analysis import AnalysisRow
+from app.repositories.v1.analysis_repository import analysis_by_dimension
+from app.schemas.v1.analysis import AnalysisRow
 
 
 def get_analysis(db: Session, group_by: str) -> list[AnalysisRow]:

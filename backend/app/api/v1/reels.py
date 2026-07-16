@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.schemas.reel import ReelRow, ReelUpdate, SnapshotRow
-from app.schemas.export import ExportRequest, ExportResponse
-from app.services.reel_service import get_reels, get_reel, get_reel_history, update_reel
-from app.services.export_service import export_reels
+from app.schemas.v1.reel import ReelRow, ReelUpdate, SnapshotRow
+from app.schemas.v1.export import ExportRequest, ExportResponse
+from app.services.v1.reel_service import get_reels, get_reel, get_reel_history, update_reel
+from app.services.v1.export_service import export_reels
 
 router = APIRouter(prefix="/reels", tags=["reels"])
 

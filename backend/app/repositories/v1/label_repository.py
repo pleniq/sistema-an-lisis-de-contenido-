@@ -7,7 +7,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import Angulo, Formato, TipoHook, Categoria, Tema
+from app.models.v1 import Angulo, Formato, TipoHook, Categoria, Tema
 
 DIMENSIONS = {
     "angulo": (Angulo, "angulo_id"),
@@ -42,6 +42,6 @@ def get_or_create(db: Session, account_id: str, dimension: str, name: str):
 
 
 def get_default_account_id(db: Session) -> Optional[str]:
-    from app.models import Account
+    from app.models.v1 import Account
     account = db.query(Account).order_by(Account.created_at).first()
     return account.id if account else None

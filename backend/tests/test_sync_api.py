@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.models import Account, IngestRun
+from app.models.v1 import Account, IngestRun
 from app.core.config import get_settings
 
 TOKEN = get_settings().LAB_INGEST_TOKEN
@@ -11,13 +11,13 @@ TOKEN = get_settings().LAB_INGEST_TOKEN
 @pytest.fixture
 def n8n_up(monkeypatch):
     """n8n vivo: ping True y trigger no-op (sin red)."""
-    monkeypatch.setattr("app.services.n8n_client.ping_n8n", lambda: True)
-    monkeypatch.setattr("app.services.n8n_client.trigger_ingest", lambda run_id: None)
+    monkeypatch.setattr("app.services.v1.n8n_client.ping_n8n", lambda: True)
+    monkeypatch.setattr("app.services.v1.n8n_client.trigger_ingest", lambda run_id: None)
 
 
 @pytest.fixture
 def n8n_down(monkeypatch):
-    monkeypatch.setattr("app.services.n8n_client.ping_n8n", lambda: False)
+    monkeypatch.setattr("app.services.v1.n8n_client.ping_n8n", lambda: False)
 
 
 def test_status_shape_when_n8n_down(client, db, n8n_down):

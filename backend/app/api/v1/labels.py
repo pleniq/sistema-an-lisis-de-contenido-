@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.repositories import label_repository as labels
-from app.schemas.label import LabelOut, LabelCreate
+from app.repositories.v1 import label_repository as labels
+from app.schemas.v1.label import LabelOut, LabelCreate
 
 router = APIRouter(prefix="/labels", tags=["labels"])
 

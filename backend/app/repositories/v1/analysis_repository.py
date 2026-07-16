@@ -1,7 +1,7 @@
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.repositories.label_repository import DIMENSIONS
+from app.repositories.v1.label_repository import DIMENSIONS
 
 
 def analysis_by_dimension(db: Session, dimension: str) -> list[dict]:

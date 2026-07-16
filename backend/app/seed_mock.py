@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 
 from app.core.database import SessionLocal
-from app.schemas.ingest import IngestBatch, IngestAccount, IngestReel, IngestMetrics
+from app.schemas.v1.ingest import IngestBatch, IngestAccount, IngestReel, IngestMetrics
 
 
 def main():
@@ -22,7 +22,7 @@ def main():
             for i in range(1, 4)
         ],
     )
-    from app.services.ingest_service import ingest_batch
+    from app.services.v1.ingest_service import ingest_batch
     db = SessionLocal()
     try:
         res = ingest_batch(db, batch)

@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 
-from app.models import Reel, ReelMetricSnapshot
-from app.schemas.ingest import IngestBatch, IngestAccount, IngestReel, IngestMetrics
-from app.services.ingest_service import ingest_batch
+from app.models.v1 import Reel, ReelMetricSnapshot
+from app.schemas.v1.ingest import IngestBatch, IngestAccount, IngestReel, IngestMetrics
+from app.services.v1.ingest_service import ingest_batch
 
 
 def _batch(reach=1000, captured="2026-07-15T06:00:00+00:00"):

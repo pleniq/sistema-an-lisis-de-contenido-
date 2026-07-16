@@ -1,8 +1,8 @@
 from datetime import datetime
 from sqlalchemy.orm import Session
 
-from app.models import Account, Reel, ReelMetricSnapshot
-from app.schemas.ingest import IngestAccount, IngestReel
+from app.models.v1 import Account, Reel, ReelMetricSnapshot
+from app.schemas.v1.ingest import IngestAccount, IngestReel
 
 
 def upsert_account(db: Session, data: IngestAccount) -> Account:

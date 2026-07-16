@@ -12,8 +12,8 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.services import n8n_client
-from app.repositories import ingest_run_repository as runs
+from app.services.v1 import n8n_client
+from app.repositories.v1 import ingest_run_repository as runs
 
 
 def _now() -> datetime:
