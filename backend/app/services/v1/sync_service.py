@@ -1,10 +1,13 @@
-"""Orquesta el sync on-demand con 3 guardas: frescura, lock y liveness de n8n.
+"""Sync on-demand: el backend jala las métricas directo de la Graph API de Meta.
 
-Outcomes de refresh() → el router los mapea a HTTP:
+refresh() es sincrónico (trae + guarda en la misma llamada; son pocos reels).
+Outcomes → el router los mapea a HTTP:
+    "ok"              → 200  (sincronizó; trae reels_processed / snapshots_written)
     "skipped_fresh"   → 200  (sincronizado hace poco; "entrar sin actualizar")
+    "not_configured"  → 200  (falta cargar el token en Configuración)
+    "token_expired"   → 200  (el token de Meta expiró; hay que pegar uno nuevo)
+    "error"           → 200  (otro error de Meta; detail explica)
     "already_running" → 409  (ya hay una corrida en curso)
-    "n8n_down"        → 503  (n8n no responde el ping)
-    "started"         → 202  (se creó la corrida y se disparó n8n)
 """
 from datetime import datetime, timezone
 from typing import Optional
@@ -12,8 +15,10 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.services.v1 import n8n_client
 from app.repositories.v1 import ingest_run_repository as runs
+from app.repositories.v1 import config_repository
+from app.services.v1 import meta_client, config_service
+from app.services.v1.ingest_service import ingest_batch
 
 
 def _now() -> datetime:
@@ -41,42 +46,54 @@ def get_status(db: Session) -> dict:
     active = runs.get_active_run(db)
     last_run = runs.get_last_run(db)
     last_synced_at = runs.get_last_synced_at(db)
+    cfg = config_service.get_status(db)
     return {
-        "n8n_alive": n8n_client.ping_n8n(),
         "running": active is not None,
         "last_synced_at": last_synced_at.isoformat() if last_synced_at else None,
         "last_run": _serialize_run(last_run),
+        "configured": cfg.token_status != "missing",
+        "token_status": cfg.token_status,           # ok | expired | missing
+        "token_expires_at": cfg.token_expires_at.isoformat() if cfg.token_expires_at else None,
+        "days_left": cfg.days_left,
+        "account_name": cfg.account_name,
     }
 
 
 def _is_fresh(last_synced_at: Optional[datetime], stale_minutes: int) -> bool:
     if last_synced_at is None:
         return False
-    age_seconds = (_now() - last_synced_at).total_seconds()
-    return age_seconds < stale_minutes * 60
+    return (_now() - last_synced_at).total_seconds() < stale_minutes * 60
 
 
 def refresh(db: Session, trigger: str = "manual", force: bool = False) -> dict:
-    """Aplica las guardas y, si corresponde, crea la corrida y dispara n8n."""
     settings = get_settings()
+    conn = config_repository.get_connection(db)
+    if conn is None or not conn.access_token or not conn.ig_user_id:
+        return {"outcome": "not_configured"}
 
     # Guarda 1 — frescura (el botón manual manda force=True y la saltea)
     if not force:
-        last_synced_at = runs.get_last_synced_at(db)
-        if _is_fresh(last_synced_at, settings.LAB_SYNC_STALE_MINUTES):
+        last = runs.get_last_synced_at(db)
+        if _is_fresh(last, settings.LAB_SYNC_STALE_MINUTES):
             return {"outcome": "skipped_fresh",
-                    "last_synced_at": last_synced_at.isoformat() if last_synced_at else None}
+                    "last_synced_at": last.isoformat() if last else None}
 
-    # Guarda 2 — lock (reapear colgadas primero, luego ver si hay una viva)
+    # Guarda 2 — lock
     runs.reap_stuck_runs(db, settings.LAB_SYNC_STUCK_MINUTES)
     if runs.get_active_run(db) is not None:
         return {"outcome": "already_running"}
 
-    # Guarda 3 — liveness de n8n
-    if not n8n_client.ping_n8n():
-        return {"outcome": "n8n_down"}
-
-    # Dispara
     run = runs.create_run(db, account_id=None, trigger=trigger)
-    n8n_client.trigger_ingest(run.id)
-    return {"outcome": "started", "run_id": run.id}
+    try:
+        batch = meta_client.fetch_batch(conn.access_token, conn.ig_user_id,
+                                        conn.account_name or "Instagram")
+        res = ingest_batch(db, batch)  # cierra la corrida abierta como 'ok'
+        config_service.mark_token_ok(db)
+        return {"outcome": "ok", **res}
+    except meta_client.MetaAuthError as exc:
+        runs.close_run(db, run.id, "error", error_detail=f"token expirado: {exc}")
+        config_service.mark_token_expired(db, f"Token expirado: {exc}")
+        return {"outcome": "token_expired", "detail": str(exc)}
+    except Exception as exc:  # noqa: BLE001 — reportamos cualquier error de Meta al front
+        runs.close_run(db, run.id, "error", error_detail=str(exc))
+        return {"outcome": "error", "detail": str(exc)}

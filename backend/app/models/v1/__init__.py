@@ -5,9 +5,11 @@ from app.models.v1.labels import Angulo, Formato, TipoHook, Categoria, Tema
 from app.models.v1.reels import Reel
 from app.models.v1.snapshots import ReelMetricSnapshot
 from app.models.v1.ingest_runs import IngestRun
+from app.models.v1.meta_connection import MetaConnection
 
 __all__ = [
     "Account",
     "Angulo", "Formato", "TipoHook", "Categoria", "Tema",
     "Reel", "ReelMetricSnapshot", "IngestRun",
+    "MetaConnection",
 ]

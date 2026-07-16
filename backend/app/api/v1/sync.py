@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -13,19 +13,10 @@ def sync_status(db: Session = Depends(get_db)):
 
 
 @router.post("/refresh")
-def sync_refresh(response: Response, trigger: str = "manual", force: bool = False,
-                 db: Session = Depends(get_db)):
+def sync_refresh(trigger: str = "manual", force: bool = False, db: Session = Depends(get_db)):
     result = sync_service.refresh(db, trigger=trigger, force=force)
-    outcome = result["outcome"]
-    if outcome == "already_running":
+    if result["outcome"] == "already_running":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                             detail="Ya hay una actualización en curso")
-    if outcome == "n8n_down":
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                            detail="n8n apagado")
-    if outcome == "skipped_fresh":
-        response.status_code = status.HTTP_200_OK
-        return result
-    # started
-    response.status_code = status.HTTP_202_ACCEPTED
+    # ok / skipped_fresh / not_configured / token_expired / error → 200 con el outcome en el body
     return result
