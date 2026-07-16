@@ -232,7 +232,7 @@ tbody tr:hover { background: #fafbff; }
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   padding: 8px 10px; border-radius: 8px; font-size: 13.5px; cursor: pointer;
 }
-.combo-item:hover { background: var(--surface); }
+.combo-item:hover, .combo-item.hl { background: var(--surface); }
 .combo-count { font-size: 11px; color: var(--muted); background: var(--surface); border-radius: 999px; padding: 1px 8px; }
 .combo-create { color: var(--blue); font-weight: 500; }
 .combo-create:hover { background: rgba(61,91,224,.08); }

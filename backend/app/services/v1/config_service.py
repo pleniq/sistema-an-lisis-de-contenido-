@@ -50,7 +50,7 @@ def save(db: Session, data: MetaConfigIn) -> MetaConfigStatus:
     token = data.access_token.strip()
     expires_at = None
     error: Optional[str] = None
-    ok = False
+    ok = True  # solo pasa a False ante un error de AUTENTICACIÓN (token realmente inválido)
 
     if data.app_id and data.app_secret:
         try:
@@ -58,17 +58,22 @@ def save(db: Session, data: MetaConfigIn) -> MetaConfigStatus:
                 data.app_id.strip(), data.app_secret.strip(), token)
             if expires_in:
                 expires_at = _now() + timedelta(seconds=expires_in)
+        except meta_client.MetaAuthError as exc:
+            error = f"Token rechazado por Meta: {exc}"
+            ok = False
         except meta_client.MetaError as exc:
-            error = f"No se pudo canjear el token largo: {exc}"
+            # error no-auth al canjear (ej. app secret mal): el token corto puede seguir sirviendo
+            error = f"No se pudo canjear a 60 días (se guarda el token tal cual): {exc}"
 
-    if error is None:
+    if ok:
         try:
             meta_client.test_token(token)
-            ok = True
         except meta_client.MetaAuthError as exc:
             error = f"Token inválido o expirado: {exc}"
+            ok = False
         except meta_client.MetaError as exc:
-            error = f"Error probando el token: {exc}"
+            # error transitorio verificando (red/Meta): no lo damos por expirado
+            error = error or f"No se pudo verificar el token ahora: {exc}"
 
     fields = dict(access_token=token, last_test_ok=ok, last_error=error, token_expires_at=expires_at)
     if data.ig_user_id:

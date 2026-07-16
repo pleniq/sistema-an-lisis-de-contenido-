@@ -9,6 +9,7 @@ Outcomes → el router los mapea a HTTP:
     "error"           → 200  (otro error de Meta; detail explica)
     "already_running" → 409  (ya hay una corrida en curso)
 """
+import logging
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -19,6 +20,8 @@ from app.repositories.v1 import ingest_run_repository as runs
 from app.repositories.v1 import config_repository
 from app.services.v1 import meta_client, config_service
 from app.services.v1.ingest_service import ingest_batch
+
+logger = logging.getLogger(__name__)
 
 
 def _now() -> datetime:
@@ -93,7 +96,11 @@ def refresh(db: Session, trigger: str = "manual", force: bool = False) -> dict:
     except meta_client.MetaAuthError as exc:
         runs.close_run(db, run.id, "error", error_detail=f"token expirado: {exc}")
         config_service.mark_token_expired(db, f"Token expirado: {exc}")
-        return {"outcome": "token_expired", "detail": str(exc)}
-    except Exception as exc:  # noqa: BLE001 — reportamos cualquier error de Meta al front
+        return {"outcome": "token_expired"}
+    except meta_client.MetaError as exc:
+        runs.close_run(db, run.id, "error", error_detail=f"error de Meta: {exc}")
+        return {"outcome": "error", "detail": "Error de la API de Meta"}
+    except Exception as exc:  # inesperado: se registra en el run, no se filtra al front
+        logger.exception("Error inesperado en sync/refresh")
         runs.close_run(db, run.id, "error", error_detail=str(exc))
-        return {"outcome": "error", "detail": str(exc)}
+        return {"outcome": "error", "detail": "Error inesperado al sincronizar"}

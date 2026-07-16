@@ -37,13 +37,13 @@ function LabelRow({ v, onRename, onDelete }: {
   );
 }
 
-function DimensionManager({ dim, label }: { dim: Dimension; label: string }) {
+function DimensionManager({ dim, label, signal }: { dim: Dimension; label: string; signal: number }) {
   const [values, setValues] = useState<LabelValue[]>([]);
   const [newName, setNewName] = useState("");
   const [msg, setMsg] = useState("");
 
   function load() { fetchLabels(dim).then(setValues).catch(() => {}); }
-  useEffect(load, [dim]);
+  useEffect(load, [dim, signal]);
 
   async function add() {
     const clean = newName.trim();
@@ -121,7 +121,7 @@ export default function EtiquetasPage() {
       </p>
       <div className="labels-grid">
         {DIMENSIONS.map(({ key, label }) => (
-          <DimensionManager key={`${key}-${seedKey}`} dim={key} label={label} />
+          <DimensionManager key={key} dim={key} label={label} signal={seedKey} />
         ))}
       </div>
     </div>
