@@ -6,6 +6,7 @@ import {
 import { num, pct, sec, day } from "../lib/format";
 import { buildClaudePrompt } from "../lib/claudePrompt";
 import Sparkline from "./Sparkline";
+import LabelCombobox from "./LabelCombobox";
 
 interface Props {
   reel: ReelRow;
@@ -131,12 +132,12 @@ export default function ReelPanel({ reel, labelOptions, onSaved, onClose }: Prop
               {DIMENSIONS.map(({ key, label }) => (
                 <div className="field" key={key}>
                   <label>{label}</label>
-                  <input list={`dl-${key}`} value={dims[key]}
-                         onChange={(e) => setDims({ ...dims, [key]: e.target.value })}
-                         placeholder="elegí o escribí uno nuevo" />
-                  <datalist id={`dl-${key}`}>
-                    {(labelOptions[key] ?? []).map((o) => <option key={o.id} value={o.name} />)}
-                  </datalist>
+                  <LabelCombobox
+                    value={dims[key]}
+                    options={labelOptions[key] ?? []}
+                    onChange={(v) => setDims({ ...dims, [key]: v })}
+                    placeholder="elegí o escribí uno nuevo"
+                  />
                 </div>
               ))}
             </div>

@@ -219,6 +219,24 @@ tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: #fafbff; }
 .strong { font-weight: 600; color: var(--indigo); }
 
+/* ---------- Combobox de etiqueta ---------- */
+.combo { position: relative; }
+.combo input { width: 100%; }
+.combo-menu {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 6;
+  background: #fff; border: 1px solid var(--border-strong); border-radius: 11px;
+  box-shadow: var(--shadow); max-height: 220px; overflow: auto;
+  padding: 4px; margin: 0; list-style: none;
+}
+.combo-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 10px; border-radius: 8px; font-size: 13.5px; cursor: pointer;
+}
+.combo-item:hover { background: var(--surface); }
+.combo-count { font-size: 11px; color: var(--muted); background: var(--surface); border-radius: 999px; padding: 1px 8px; }
+.combo-create { color: var(--blue); font-weight: 500; }
+.combo-create:hover { background: rgba(61,91,224,.08); }
+
 /* ---------- Etiquetas ---------- */
 .labels-wrap { max-width: 1080px; margin: 0 auto; }
 .labels-intro { max-width: 640px; margin: 0 0 22px; }
