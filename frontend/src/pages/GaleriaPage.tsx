@@ -115,6 +115,7 @@ export default function GaleriaPage() {
         <ReelPanel
           reel={open}
           labelOptions={labelOptions}
+          reloadLabels={reloadLabels}
           onSaved={(u) => { updateReel(u); reloadLabels(); setOpen(u); }}
           onClose={() => setOpen(null)}
         />

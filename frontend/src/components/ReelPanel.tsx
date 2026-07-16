@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   DIMENSIONS, Dimension, LabelValue, ReelRow, ReelUpdate, SnapshotRow,
-  patchReel, fetchReelHistory,
+  patchReel, fetchReelHistory, createLabel,
 } from "../lib/api";
 import { num, pct, sec, day } from "../lib/format";
 import { buildClaudePrompt } from "../lib/claudePrompt";
@@ -11,6 +11,7 @@ import LabelCombobox from "./LabelCombobox";
 interface Props {
   reel: ReelRow;
   labelOptions: Record<Dimension, LabelValue[]>;
+  reloadLabels: () => void;
   onSaved: (updated: ReelRow) => void;
   onClose: () => void;
 }
@@ -30,7 +31,7 @@ const METRICS: { key: keyof ReelRow; label: string; fmt: (r: ReelRow) => string 
   { key: "avg_watch_time_sec", label: "Watch (s)", fmt: (r) => sec(r.avg_watch_time_sec) },
 ];
 
-export default function ReelPanel({ reel, labelOptions, onSaved, onClose }: Props) {
+export default function ReelPanel({ reel, labelOptions, reloadLabels, onSaved, onClose }: Props) {
   const [titulo, setTitulo] = useState(reel.titulo ?? "");
   const [guion, setGuion] = useState(reel.guion ?? "");
   const [dims, setDims] = useState<Record<Dimension, string>>({
@@ -136,6 +137,7 @@ export default function ReelPanel({ reel, labelOptions, onSaved, onClose }: Prop
                     value={dims[key]}
                     options={labelOptions[key] ?? []}
                     onChange={(v) => setDims({ ...dims, [key]: v })}
+                    onCreate={async (name) => { await createLabel(key, name).catch(() => {}); reloadLabels(); }}
                     placeholder="elegí o escribí uno nuevo"
                   />
                 </div>

@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { DIMENSIONS, Dimension, LabelValue, fetchLabels, createLabel, renameLabel, deleteLabel } from "../lib/api";
+import {
+  DIMENSIONS, Dimension, LabelValue,
+  fetchLabels, createLabel, renameLabel, deleteLabel, seedDefaultLabels,
+} from "../lib/api";
 
 function LabelRow({ v, onRename, onDelete }: {
   v: LabelValue; onRename: (name: string) => void; onDelete: () => void;
@@ -82,16 +85,44 @@ function DimensionManager({ dim, label }: { dim: Dimension; label: string }) {
 }
 
 export default function EtiquetasPage() {
+  const [seedKey, setSeedKey] = useState(0);
+  const [seeding, setSeeding] = useState(false);
+  const [seedMsg, setSeedMsg] = useState("");
+
+  async function loadSuggested() {
+    setSeeding(true);
+    try {
+      await seedDefaultLabels();
+      setSeedKey((k) => k + 1);  // remonta los managers → recargan
+      setSeedMsg("Valores sugeridos cargados ✓");
+    } catch {
+      setSeedMsg("No se pudieron cargar");
+    }
+    setSeeding(false);
+    setTimeout(() => setSeedMsg(""), 3000);
+  }
+
   return (
     <div className="labels-wrap">
-      <h1 className="page-title">Etiquetas</h1>
+      <div className="labels-head">
+        <h1 className="page-title">Etiquetas</h1>
+        <div className="labels-head-actions">
+          {seedMsg && <span className="sync-msg">{seedMsg}</span>}
+          <button className="btn btn-ghost" onClick={loadSuggested} disabled={seeding}>
+            {seeding ? "Cargando…" : "Cargar valores sugeridos"}
+          </button>
+        </div>
+      </div>
       <p className="hint labels-intro">
-        Gestioná los valores de cada dimensión. Click en un nombre para <b>renombrar</b>, la ✕ para <b>borrar</b>.
-        No distingue mayúsculas y si renombrás uno al nombre de otro que ya existe, <b>se fusionan</b> — así no
-        se duplican por tipeo (ej. "Talking head" vs "talking head").
+        Gestioná los valores de cada dimensión. Click en un nombre para <b>renombrar</b>, la ✕ para <b>borrar</b>,
+        o "Agregar" para sumar uno nuevo. No distingue mayúsculas y si renombrás uno al nombre de otro que ya
+        existe, <b>se fusionan</b> (así no se duplican por tipeo). "Cargar valores sugeridos" trae los comunes del
+        framework de contenido — después los editás a gusto.
       </p>
       <div className="labels-grid">
-        {DIMENSIONS.map(({ key, label }) => <DimensionManager key={key} dim={key} label={label} />)}
+        {DIMENSIONS.map(({ key, label }) => (
+          <DimensionManager key={`${key}-${seedKey}`} dim={key} label={label} />
+        ))}
       </div>
     </div>
   );

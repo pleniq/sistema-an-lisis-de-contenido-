@@ -22,8 +22,42 @@ DIMENSIONS = {
 }
 
 
+# Valores sugeridos por dimensión (framework de contenido de Pleniq).
+DEFAULT_VALUES = {
+    "angulo": [
+        "Deseo", "Dolor", "Resultado del servicio", "Viejo vs Nuevo", "Objeciones",
+        "Obstáculos", "Errores comunes", "Mitos / creencias", "Enemigo común",
+    ],
+    "formato": [
+        "Talking head con jump cuts", "Talking head + B-roll", "POV de proceso real",
+        "Carrusel con hook", "Voz en off + B-roll", "Walk & talk",
+        "Screen recording narrado", "Storytime sentado", "Skit / actuado",
+        "Pizarra / explainer", "Reacción / crítica", "Duo / colaboración",
+    ],
+    "tipo_hook": [
+        "Desafiante / provocador", "Promesa / resultado", "Historia / prueba social",
+        "Problema / dolor", "Comparación / contraste", "Urgencia / FOMO",
+        "Curiosidad / loop abierto",
+    ],
+    "categoria": ["TOFU", "MOFU", "BOFU"],
+    "tema": [
+        "Sistemas a medida", "Páginas web", "Automatizaciones", "CRM",
+        "Precios", "Casos de cliente",
+    ],
+}
+
+
 def is_valid_dimension(dimension: str) -> bool:
     return dimension in DIMENSIONS
+
+
+def seed_defaults(db: Session, account_id: str) -> dict:
+    """Crea los valores sugeridos de cada dimensión (idempotente). Devuelve cuántos hay por dimensión."""
+    for dimension, values in DEFAULT_VALUES.items():
+        for name in values:
+            get_or_create(db, account_id, dimension, name)
+    db.commit()
+    return {dim: len(vals) for dim, vals in DEFAULT_VALUES.items()}
 
 
 def list_labels(db: Session, dimension: str) -> list:

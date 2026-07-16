@@ -20,6 +20,16 @@ def list_dimension(dimension: str, db: Session = Depends(get_db)):
             for l, c in labels.list_labels_with_counts(db, dimension)]
 
 
+@router.post("/seed-defaults")
+def seed_defaults(db: Session = Depends(get_db)):
+    """Carga los valores sugeridos (framework de contenido) en todas las dimensiones."""
+    account_id = labels.get_default_account_id(db)
+    if account_id is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="No hay cuenta todavía; sincronizá al menos una vez")
+    return labels.seed_defaults(db, account_id)
+
+
 @router.post("/{dimension}", response_model=LabelOut, status_code=status.HTTP_201_CREATED)
 def create_dimension(dimension: str, body: LabelCreate, db: Session = Depends(get_db)):
     _valid_or_404(dimension)

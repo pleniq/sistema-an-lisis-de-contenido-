@@ -117,6 +117,9 @@ export const createLabel = (dim: Dimension, name: string): Promise<LabelValue> =
     body: JSON.stringify({ name }),
   }).then(jsonOrThrow);
 
+export const seedDefaultLabels = (): Promise<Record<string, number>> =>
+  fetch("/api/v1/labels/seed-defaults", { method: "POST" }).then(jsonOrThrow);
+
 export const renameLabel = (dim: Dimension, id: string, name: string): Promise<LabelRenameResult> =>
   fetch(`/api/v1/labels/${dim}/${id}`, {
     method: "PATCH", headers: { "Content-Type": "application/json" },

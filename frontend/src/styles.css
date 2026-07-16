@@ -239,7 +239,10 @@ tbody tr:hover { background: #fafbff; }
 
 /* ---------- Etiquetas ---------- */
 .labels-wrap { max-width: 1080px; margin: 0 auto; }
-.labels-intro { max-width: 640px; margin: 0 0 22px; }
+.labels-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.labels-head .page-title { margin: 4px 0; }
+.labels-head-actions { display: flex; align-items: center; gap: 12px; }
+.labels-intro { max-width: 680px; margin: 6px 0 22px; }
 .labels-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
 .label-card { padding: 18px 18px 14px; }
 .label-add { display: flex; gap: 8px; margin-bottom: 12px; }

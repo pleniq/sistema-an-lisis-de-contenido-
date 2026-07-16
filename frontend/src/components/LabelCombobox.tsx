@@ -5,6 +5,7 @@ interface Props {
   value: string;
   options: LabelValue[];
   onChange: (v: string) => void;
+  onCreate?: (name: string) => void;  // crea la etiqueta al instante y la suma a la lista
   placeholder?: string;
 }
 
@@ -12,7 +13,7 @@ interface Props {
  * Selector de etiqueta: al enfocar muestra las opciones ya creadas, filtra
  * mientras escribís, y si el texto no existe ofrece "＋ Crear «…»".
  */
-export default function LabelCombobox({ value, options, onChange, placeholder }: Props) {
+export default function LabelCombobox({ value, options, onChange, onCreate, placeholder }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -47,7 +48,13 @@ export default function LabelCombobox({ value, options, onChange, placeholder }:
             </li>
           ))}
           {showCreate && (
-            <li className="combo-item combo-create" onMouseDown={() => setOpen(false)}>
+            <li className="combo-item combo-create"
+                onMouseDown={() => {
+                  const name = value.trim();
+                  onCreate?.(name);   // lo crea y lo suma a la lista al instante
+                  onChange(name);
+                  setOpen(false);
+                }}>
               ＋ Crear «{value.trim()}»
             </li>
           )}

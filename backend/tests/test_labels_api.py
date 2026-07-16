@@ -32,6 +32,20 @@ def test_create_label_without_account_400(client, db):
     assert resp.status_code == 400
 
 
+def test_seed_defaults(client, db):
+    ingest_reels(client, n=1)  # crea la cuenta
+    resp = client.post("/api/v1/labels/seed-defaults")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["categoria"] == 3  # TOFU/MOFU/BOFU
+    assert body["angulo"] == 9
+    formatos = client.get("/api/v1/labels/formato").json()
+    assert len(formatos) == 12
+    # idempotente: correr de nuevo no duplica
+    client.post("/api/v1/labels/seed-defaults")
+    assert len(client.get("/api/v1/labels/formato").json()) == 12
+
+
 def test_create_is_case_insensitive(client, db):
     ingest_reels(client, n=1)
     a = client.post("/api/v1/labels/formato", json={"name": "Talking head"}).json()
